@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/jmcvetta/randutil"
@@ -28,6 +29,7 @@ func main() {
 		Short  bool          `goptions:"-s, --short, description='Short fortunes only'"`
 		Long   bool          `goptions:"-l, --long, description='Long fortunes only'"`
 		Wait   time.Duration `goptions:"-w, --wait, description='Delay before displaying fortune'"`
+		List   bool          `goptions:"-t, --list, description='Print out the fortune files in the folder'"`
 		Help   goptions.Help `goptions:"-h, --help, description='Show this help'"`
 	}{ // Default values goes here
 		Wait:   0 * time.Second,
@@ -35,8 +37,32 @@ func main() {
 	}
 	goptions.ParseAndFail(&options)
 	files := readAllFiles(options.Folder, &options.Short, &options.Long)
-	fortune := selectFortune(&files, &options.Short, &options.Long)
-	displayFortune(&fortune, &options.Wait)
+	if options.List {
+		fortuneFiles := listFiles(options.Folder)
+		for _, file := range fortuneFiles {
+			fmt.Printf("%s\n", file)
+		}
+	} else {
+		fortune := selectFortune(&files, &options.Short, &options.Long)
+		displayFortune(&fortune, &options.Wait)
+	}
+}
+
+func listFiles(folder string) []string {
+	var files []string
+	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if isFortuneFile(path) {
+			files = append(files, path)
+		}
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+	return files
 }
 
 // Read all files in a directory
@@ -46,8 +72,10 @@ func readAllFiles(folder string, short *bool, long *bool) []FileInfo {
 		if info.IsDir() {
 			return nil
 		}
-		fortunes := readFile(path, short, long)
-		files = append(files, FileInfo{path, len(fortunes)})
+		if isFortuneFile(path) {
+			fortunes := readFile(path, short, long)
+			files = append(files, FileInfo{path, len(fortunes)})
+		}
 		return nil
 	})
 	if err != nil {
@@ -132,4 +160,20 @@ func openFolder(folder string) []string {
 		fmt.Println(file)
 	}
 	return files
+}
+
+func isFortuneFile(filename string) bool {
+	var isFortune bool = true
+	/* list of "illegal" suffixes" */
+	var suffixList = []string{
+		"dat", "pos", "c", "h", "p", "i", "f",
+		"pas", "ftn", "ins.c", "ins,pas",
+		"ins.ftn", "sml"}
+	for _, suf := range suffixList {
+		if strings.HasSuffix(filename, suf) {
+			isFortune = false
+			break
+		}
+	}
+	return isFortune
 }
