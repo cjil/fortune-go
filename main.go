@@ -34,21 +34,19 @@ func main() {
 		Folder: os.Getenv("FORTUNES_FOLDER"),
 	}
 	goptions.ParseAndFail(&options)
-	files := readAllFiles(options.Folder, &options.Short, &options.Long) // Add options as flags (short, long)
-	fortune := selectFortune(&files, &options.Short, &options.Long)      // Add options as flags (short, long)
-	displayFortune(&fortune, &options.Wait)                              // Add options as flags (wait)
+	files := readAllFiles(options.Folder, &options.Short, &options.Long)
+	fortune := selectFortune(&files, &options.Short, &options.Long)
+	displayFortune(&fortune, &options.Wait)
 }
 
 // Read all files in a directory
 func readAllFiles(folder string, short *bool, long *bool) []FileInfo {
 	var files []FileInfo
-	// For file in folder
 	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
-		// read file
 		if info.IsDir() {
 			return nil
 		}
-		fortunes := readFile(path, short, long) // Add options as flags (short, long)
+		fortunes := readFile(path, short, long)
 		files = append(files, FileInfo{path, len(fortunes)})
 		return nil
 	})
@@ -101,22 +99,22 @@ func readFile(filePath string, short *bool, long *bool) []string {
 	// Convert []byte to string
 	text := string(content)
 	splitText := splitFile(&text)
-	var returnedText []string
+	var filteredText []string
 	if *short {
 		for _, item := range splitText {
 			if len(item) <= ShortLength {
-				returnedText = append(returnedText, item)
+				filteredText = append(filteredText, item)
 			}
 		}
-		return returnedText
+		return filteredText
 	}
 	if *long {
 		for _, item := range splitText {
 			if len(item) > ShortLength {
-				returnedText = append(returnedText, item)
+				filteredText = append(filteredText, item)
 			}
 		}
-		return returnedText
+		return filteredText
 	}
 	return splitText
 }
