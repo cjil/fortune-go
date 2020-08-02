@@ -19,8 +19,61 @@ const ShortLength int = 160
 
 // FileInfo - Information for a Fortune file
 type FileInfo struct {
-	filePath string
-	fortunes int
+	filePath      string
+	fortunes      []int
+	shortFortunes []int
+	longFortunes  []int
+	weightShort   int
+	weightLong    int
+	weight        int
+}
+
+func (f *FileInfo) processFortunes(fortunes []string) {
+	for index, fortune := range fortunes {
+		if len(fortune) >= ShortLength {
+			f.longFortunes = append(f.longFortunes, index)
+			f.weightLong++
+		}
+		if len(fortune) < ShortLength {
+			f.shortFortunes = append(f.shortFortunes, index)
+			f.weightLong++
+		}
+		f.fortunes = append(f.fortunes, index)
+		f.weight++
+	}
+}
+
+func (f *FileInfo) setPath(path string) {
+	f.filePath = path
+}
+
+func (f FileInfo) getFortuneIndex(short bool, long bool) (string, error) {
+	content, err := ioutil.ReadFile(f.filePath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	text := string(content)
+	fortunes := splitFile(&text)
+	if short {
+		index, err := randutil.IntRange(0, len(f.shortFortunes))
+		return fortunes[index], err
+	} else if long {
+		index, err := randutil.IntRange(0, len(f.longFortunes))
+		return fortunes[index], err
+	} else {
+		index, err := randutil.IntRange(0, len(f.fortunes))
+		return fortunes[index], err
+	}
+}
+
+func (f FileInfo) getWeight(short bool, long bool) int {
+	if short {
+		return f.weightShort
+	} else if long {
+		return f.weightLong
+	} else {
+		return f.weight
+	}
 }
 
 func main() {
@@ -74,7 +127,10 @@ func readAllFiles(folder string, short *bool, long *bool) []FileInfo {
 		}
 		if isFortuneFile(path) {
 			fortunes := readFile(path, short, long)
-			files = append(files, FileInfo{path, len(fortunes)})
+			var f FileInfo
+			f.setPath(path)
+			f.processFortunes(fortunes)
+			files = append(files, f)
 		}
 		return nil
 	})
@@ -101,7 +157,7 @@ func selectFortune(files *[]FileInfo, short *bool, long *bool) string {
 	var choices []randutil.Choice
 	for _, file := range *files {
 		choices = append(choices, randutil.Choice{
-			Weight: file.fortunes,
+			Weight: file.getWeight(*short, *long),
 			Item:   file.filePath})
 	}
 	result, err := randutil.WeightedChoice(choices)
