@@ -47,7 +47,7 @@ func (f *FileInfo) setPath(path string) {
 	f.filePath = path
 }
 
-func (f FileInfo) getFortuneIndex(short bool, long bool) (string, error) {
+func (f FileInfo) getFortune(short bool, long bool) (string, error) {
 	content, err := ioutil.ReadFile(f.filePath)
 	if err != nil {
 		log.Fatal(err)
